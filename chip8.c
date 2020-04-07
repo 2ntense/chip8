@@ -4,6 +4,9 @@
 #define SCREEN_WIDTH 64
 #define SCREEN_HEIGHT 32
 
+#define MEMORY_SIZE 4096
+#define STACK_SIZE 16
+
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
 
@@ -27,7 +30,7 @@ unsigned char chip8_fontset[80] =
         0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
 
-unsigned char mem[4096];
+unsigned char mem[MEMORY_SIZE];
 // registers
 unsigned short pc;
 unsigned char V[16];
@@ -38,9 +41,10 @@ unsigned char t_sound;
 
 unsigned char screen[SCREEN_WIDTH][SCREEN_HEIGHT];
 unsigned short opcode;
-unsigned short stack[16];
+unsigned short stack[STACK_SIZE];
 unsigned char key[16];
 unsigned char key_press;
+unsigned char draw_flag;
 
 int init_chip8()
 {
@@ -61,7 +65,7 @@ int init_chip8()
 
 int load_program()
 {
-    FILE *f = fopen("roms/AIRPLANE.ch8", "rb");
+    FILE *f = fopen("roms/FIGURES.ch8", "rb");
     size_t ret = fread(mem + 0x200, 1, 38, f);
 
     if (ret != 38)
@@ -130,6 +134,15 @@ int init()
 
 void draw_screen()
 {
+    for (int i = 0; i < SCREEN_HEIGHT; i++)
+    {
+        for (int j = 0; j < SCREEN_WIDTH; j++)
+        {
+            printf("%02x ", screen[j][i]);
+        }
+        printf("\n");
+    }
+    printf("\nENDENDEND\n");
 }
 
 unsigned char spr_addr(unsigned char c)
@@ -140,26 +153,36 @@ unsigned char spr_addr(unsigned char c)
     return c;
 }
 
+void inc_pc()
+{
+    pc += 2;
+}
+
 void emulate_cycle()
 {
     // Fetch Opcode
     opcode = mem[pc] << 8 | mem[pc + 1];
-    printf("opcode: 0x%x\n", opcode);
+    printf("pc: %p\topcode: %p\n", pc, opcode);
     // Decode Opcode
-    unsigned short tmp;
+    unsigned short a;
+    unsigned short b;
+    unsigned short c;
+    unsigned short d;
     switch (opcode & 0xF000)
     {
     case 0x0000:
         switch (opcode & 0x00FF)
         {
         case 0x00E0:
-            // clear screen
+            memset(screen, 0, sizeof(screen));
+            draw_flag = 1;
+            inc_pc();
             break;
         case 0x00EE:
             // return from a subroutine
-            pc = stack[sp];
             if (sp > 0)
                 sp--;
+            pc = stack[sp];
             break;
         default:
             // Calls RCA 1802 program at address 0x0NNN. Not necessary for most ROMs.
@@ -170,27 +193,35 @@ void emulate_cycle()
         pc = opcode & 0x0FFF;
         break;
     case 0x2000:
-        sp++;
         stack[sp] = pc;
+        if (sp < STACK_SIZE - 1)
+            sp++;
+        else
+            printf("Stack is full\n");
         pc = opcode & 0x0FFF;
         break;
     case 0x3000:
         if (V[opcode & 0x0F00 >> 8] == opcode & 0x00FF)
-            pc += 2;
+            inc_pc();
+        inc_pc();
         break;
     case 0x4000:
         if (V[opcode & 0x0F00 >> 8] != opcode & 0x00FF)
-            pc += 2;
+            inc_pc();
+        inc_pc();
         break;
     case 0x5000:
         if (V[opcode & 0x0F00 >> 8] == V[opcode & 0x00F0 >> 4])
-            pc += 2;
+            inc_pc();
+        inc_pc();
         break;
     case 0x6000:
         V[opcode & 0x0F00 >> 8] = opcode & 0x00FF;
+        inc_pc();
         break;
     case 0x7000:
         V[opcode & 0x0F00 >> 8] = V[opcode & 0x0F00 >> 8] + opcode & 0x00FF;
+        inc_pc();
         break;
     case 0x8000:
         switch (opcode & 0x000F)
@@ -208,9 +239,9 @@ void emulate_cycle()
             V[opcode & 0x0F00 >> 8] = V[opcode & 0x0F00 >> 8] ^ V[opcode & 0x00F0 >> 4];
             break;
         case 0x0004:
-            tmp = V[opcode & 0x0F00 >> 8] + V[opcode & 0x00F0 >> 4];
-            V[0xF] = tmp > 0xFF ? 1 : 0;
-            V[opcode & 0x0F00 >> 4] = tmp & 0x000F;
+            a = V[opcode & 0x0F00 >> 8] + V[opcode & 0x00F0 >> 4];
+            V[0xF] = a > 0xFF ? 1 : 0;
+            V[opcode & 0x0F00 >> 4] = a & 0x000F;
             break;
         case 0x0005:
             V[0xF] = V[opcode & 0x0F00 >> 8] > V[opcode & 0x00F0 >> 4] ? 1 : 0;
@@ -231,22 +262,45 @@ void emulate_cycle()
         default:
             break;
         }
+        inc_pc();
         break;
     case 0x9000:
         if (V[opcode & 0x0F00 >> 8] != V[opcode & 0x00F0 >> 4])
-            pc += 2;
+            inc_pc();
+        inc_pc();
         break;
     case 0xA000:
         I = opcode & 0x0FFF;
+        inc_pc();
         break;
     case 0xB000:
         pc = (opcode & 0x0FFF) + V[0];
         break;
     case 0xC000:
         V[opcode & 0x0F00 >> 8] = (rand() % 256) & (opcode & 0x00FF);
+        inc_pc();
         break;
     case 0xD000:
-        // TODO
+        a = V[opcode & 0x0F00 >> 2]; // x
+        b = V[opcode & 0x00F0 >> 1]; // y
+        c = opcode & 0x000F;         // amount
+        V[0xF] = 0;
+        for (int yline = 0; yline < c; yline++)
+        {
+            d = mem[I + yline];
+            for (int xline = 0; xline < 8; xline++)
+            {
+                if ((d & (0x80 >> xline)) != 0)
+                {
+                    if (screen[a + xline][b + yline] == 1)
+                        V[0xF] = 1;
+                    screen[a + xline][b + yline] ^= 1;
+                }
+            }
+        }
+
+        draw_flag = 1;
+        inc_pc();
         break;
     case 0xE000:
         switch (opcode & 0x00FF)
@@ -260,6 +314,7 @@ void emulate_cycle()
         default:
             break;
         }
+        inc_pc();
         break;
     case 0xF000:
         switch (opcode & 0x00FF)
@@ -286,10 +341,10 @@ void emulate_cycle()
             I = spr_addr(V[opcode & 0x0F00 >> 2]);
             break;
         case 0x0033:
-            tmp = opcode & 0x0F00 >> 2;
-            mem[I] = V[tmp] / 100;
-            mem[I + 1] = V[tmp] % 100 / 10;
-            mem[I + 2] = V[tmp] % 100 % 10;
+            a = opcode & 0x0F00 >> 2;
+            mem[I] = V[a] / 100;
+            mem[I + 1] = V[a] % 100 / 10;
+            mem[I + 2] = V[a] % 100 % 10;
             break;
         case 0x0055:
             memcpy(mem + I, V, opcode & 0x0F00 >> 2);
@@ -300,11 +355,9 @@ void emulate_cycle()
         default:
             break;
         }
+        inc_pc();
         break;
     }
-
-    // Execute Opcode
-
     // Update timers
 }
 
@@ -316,5 +369,11 @@ int main()
     while (1)
     {
         emulate_cycle();
+        if (draw_flag)
+            draw_screen();
+        usleep(50000);
+        // usleep(500000);
     }
+
+    return 0;
 }
