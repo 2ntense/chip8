@@ -40,6 +40,7 @@ unsigned char screen[SCREEN_WIDTH][SCREEN_HEIGHT];
 unsigned short opcode;
 unsigned short stack[16];
 unsigned char key[16];
+unsigned char key_press;
 
 int init_chip8()
 {
@@ -60,7 +61,7 @@ int init_chip8()
 
 int load_program()
 {
-    FILE *f = fopen("2.ch8", "rb");
+    FILE *f = fopen("roms/AIRPLANE.ch8", "rb");
     size_t ret = fread(mem + 0x200, 1, 38, f);
 
     if (ret != 38)
@@ -129,6 +130,14 @@ int init()
 
 void draw_screen()
 {
+}
+
+unsigned char spr_addr(unsigned char c)
+{
+    if (c > 0xF)
+        return 0;
+
+    return c;
 }
 
 void emulate_cycle()
@@ -256,10 +265,13 @@ void emulate_cycle()
         switch (opcode & 0x00FF)
         {
         case 0x0007:
-            /* code */
+            V[opcode & 0x0F00 >> 2] = t_delay;
             break;
         case 0x000A:
-            /* code */
+            key_press = 0;
+            while (!key_press)
+                ;
+            V[opcode & 0x0F00 >> 2] = key_press;
             break;
         case 0x0015:
             t_delay = V[opcode & 0x0F00 >> 8];
@@ -271,16 +283,19 @@ void emulate_cycle()
             I += opcode & 0x0F00 >> 8;
             break;
         case 0x0029:
-            /* code */
+            I = spr_addr(V[opcode & 0x0F00 >> 2]);
             break;
         case 0x0033:
-            //
+            tmp = opcode & 0x0F00 >> 2;
+            mem[I] = V[tmp] / 100;
+            mem[I + 1] = V[tmp] % 100 / 10;
+            mem[I + 2] = V[tmp] % 100 % 10;
             break;
         case 0x0055:
-            /* code */
+            memcpy(mem + I, V, opcode & 0x0F00 >> 2);
             break;
         case 0x0065:
-            /* code */
+            memcpy(V, mem + I, opcode & 0x0F00 >> 2);
             break;
         default:
             break;
