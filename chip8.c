@@ -41,8 +41,7 @@ unsigned char sp;
 unsigned char t_delay;
 unsigned char t_sound;
 
-// unsigned char screen[SCREEN_WIDTH][SCREEN_HEIGHT];
-unsigned char screen[SCREEN_WIDTH * SCREEN_HEIGHT];
+unsigned char screen[SCREEN_WIDTH][SCREEN_HEIGHT];
 unsigned short opcode;
 unsigned short stack[STACK_SIZE];
 unsigned char key[16];
@@ -68,16 +67,16 @@ int init_chip8()
 
 int load_program()
 {
-	char *file_path = "roms/AIRPLANE.ch8";
+	char *file_path = "roms/IBM.ch8";
 	FILE *f = fopen(file_path, "rb");
+
 	struct stat s;
 	stat(file_path, &s);
-	// int program_size = 85;
 	size_t ret = fread(mem + 0x200, 1, s.st_size, f);
 
 	if (ret != s.st_size)
 	{
-		printf("program loaded unsuccesfully\n");
+		printf("Program loaded unsuccesfully\n");
 		return -1;
 	}
 	printf("Program loaded succesfully\n");
@@ -125,33 +124,20 @@ int init()
 {
 	init_gfx();
 
-	SDL_Point p0 = {1, 1};
-	SDL_Point p1 = {3, 3};
-	SDL_Point points[2] = {p0, p1};
-
-	SDL_RenderDrawPoints(renderer, points, sizeof(points) / sizeof(points[0]));
-
-	SDL_RenderPresent(renderer);
-
-	//Wait two seconds
-	SDL_Delay(5000);
-
 	return 0;
 }
 
 void draw_screen()
 {
-	for (int i = 0; i < SCREEN_HEIGHT * SCREEN_WIDTH; i++)
+	for (int i = 0; i < SCREEN_HEIGHT; i++)
 	{
-		if (i % SCREEN_WIDTH == 0)
-			printf("\n");
-		if (screen[i] != 0)
-			printf("%02x ", screen[i]);
-		else
-			printf("  ");
+		for (int j = 0; j < SCREEN_WIDTH; j++)
+		{
+			if (screen[j][i] == 1)
+				SDL_RenderDrawPoint(renderer, j, i);
+		}
 	}
-	printf("\nENDENDEND\n");
-
+	SDL_RenderPresent(renderer);
 	draw_flag = 0;
 }
 
@@ -303,25 +289,12 @@ void emulate_cycle()
 			{
 				if ((d & (0x80 >> xline)) != 0)
 				{
-					if (screen[(a + xline + ((b + yline) * 64))] == 1)
+					if (screen[a + xline][b + yline] == 1)
 						V[0xF] = 1;
-					screen[a + xline + ((b + yline) * 64)] ^= 1;
+					screen[a + xline][b + yline] ^= 1;
 				}
 			}
 		}
-		// for (int yline = 0; yline < c; yline++)
-		// {
-		// 	d = mem[I + yline];
-		// 	for (int xline = 0; xline < 8; xline++)
-		// 	{
-		// 		if ((d & (0x80 >> xline)) != 0)
-		// 		{
-		// 			if (screen[a + xline][b + yline] == 1)
-		// 				V[0xF] = 1;
-		// 			screen[a + xline][b + yline] ^= 1;
-		// 		}
-		// 	}
-		// }
 
 		draw_flag = 1;
 		inc_pc();
@@ -388,6 +361,7 @@ void emulate_cycle()
 int main()
 {
 	init_chip8();
+	init_gfx();
 	load_program();
 
 	while (1)
