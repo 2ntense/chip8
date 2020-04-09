@@ -78,14 +78,14 @@ void init_chip8n(chip8_t *chip8)
 	printf("CHIP-8 initialized\n");
 }
 
-int load_program()
+int load_program(chip8_t *c)
 {
 	char *file_path = "roms/WALL.ch8";
 	FILE *f = fopen(file_path, "rb");
 
 	struct stat s;
 	stat(file_path, &s);
-	size_t ret = fread(mem + 0x200, 1, s.st_size, f);
+	size_t ret = fread(c->mem + 0x200, 1, s.st_size, f);
 
 	if (ret != s.st_size)
 	{
@@ -167,7 +167,7 @@ void inc_pc()
 	pc += 2;
 }
 
-void emulate_cycle()
+void emulate_cycle(chip8_t *c)
 {
 	// Fetch Opcode
 	opcode = mem[pc] << 8 | mem[pc + 1];
@@ -365,12 +365,15 @@ void emulate_cycle()
 int main()
 {
 	init_chip8();
+	chip8_t chip8;
+	init_chip8n(&chip8);
+	printf("%d\n", chip8.opcode);
 	init_gfx();
-	load_program();
+	load_program(&chip8);
 
 	while (1)
 	{
-		emulate_cycle();
+		emulate_cycle(&chip8);
 		if (draw_flag)
 			draw_screen();
 		usleep(5000);
