@@ -12,7 +12,7 @@ int main()
 	{
 		emulate_cycle(chip8);
 		if (chip8->screen->draw_flag)
-			draw_screen(chip8);
+			draw(chip8->screen);
 		usleep(5000);
 		// usleep(500000);
 	}

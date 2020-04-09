@@ -15,6 +15,7 @@ typedef struct screen_t
 } screen_t;
 
 screen_t *init_screen();
+void draw(screen_t *);
 int close_gfx(screen_t *);
 
 #endif

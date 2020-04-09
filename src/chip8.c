@@ -32,6 +32,13 @@ int load_program(chip8_t *chip8)
 
 	struct stat s;
 	stat(file_path, &s);
+
+	if (s.st_size > (0xFFF - 0x200))
+	{
+		printf("Program too big\n");
+		return -1;
+	}
+
 	size_t ret = fread(chip8->mem + 0x200, 1, s.st_size, f);
 
 	if (ret != s.st_size)
@@ -56,19 +63,19 @@ void inc_pc(chip8_t *chip8)
 	chip8->pc += 2;
 }
 
-void draw_screen(chip8_t *chip8)
-{
-    for (int i = 0; i < SCREEN_HEIGHT; i++)
-    {
-        for (int j = 0; j < SCREEN_WIDTH; j++)
-        {
-            if (chip8->screen->frame_buf[j][i] == 1)
-                SDL_RenderDrawPoint(chip8->screen->renderer, j, i);
-        }
-    }
-    SDL_RenderPresent(chip8->screen->renderer);
-    chip8->screen->draw_flag = 0;
-}
+// void draw_screen(chip8_t *chip8)
+// {
+// 	for (int i = 0; i < SCREEN_HEIGHT; i++)
+// 	{
+// 		for (int j = 0; j < SCREEN_WIDTH; j++)
+// 		{
+// 			if (chip8->screen->frame_buf[j][i] == 1)
+// 				SDL_RenderDrawPoint(chip8->screen->renderer, j, i);
+// 		}
+// 	}
+// 	SDL_RenderPresent(chip8->screen->renderer);
+// 	chip8->screen->draw_flag = 0;
+// }
 
 void emulate_cycle(chip8_t *chip8)
 {

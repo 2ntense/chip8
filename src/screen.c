@@ -28,6 +28,19 @@ screen_t *init_screen()
     return screen;
 }
 
+void draw(screen_t *screen)
+{
+    for (int i = 0; i < SCREEN_HEIGHT; i++)
+    {
+        for (int j = 0; j < SCREEN_WIDTH; j++)
+        {
+            if (screen->frame_buf[j][i] == 1)
+                SDL_RenderDrawPoint(screen->renderer, j, i);
+        }
+    }
+    SDL_RenderPresent(screen->renderer);
+    screen->draw_flag = 0;
+}
 
 int close_gfx(screen_t *screen)
 {

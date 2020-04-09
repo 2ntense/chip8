@@ -31,13 +31,13 @@ static const uint8_t chip8_fontset[80] =
 
 typedef struct chip8_t
 {
-	uint8_t mem[MEMORY_SIZE]; // Memory
-	uint8_t V[NUM_REGS];	  // General registers
-	uint16_t pc;			  // Program counter
-	uint16_t I;				  // Special register
-	uint8_t sp;				  // Stack pointer
-	uint8_t t_delay;		  // Delay timer
-	uint8_t t_sound;		  // Sound timer
+	uint8_t mem[MEMORY_SIZE];	// Memory
+	uint8_t V[NUM_REGS];		// General registers
+	uint16_t pc;				// Program counter
+	uint16_t I;					// Special register
+	uint8_t sp;					// Stack pointer
+	uint8_t t_delay;			// Delay timer
+	uint8_t t_sound;			// Sound timer
 	uint16_t stack[STACK_SIZE]; // Stack
 	uint8_t key[NUM_KEYS];		// Keys
 	uint8_t key_press;			// Key pressed flag
@@ -48,7 +48,6 @@ chip8_t *init_chip8(screen_t *);
 int load_program(chip8_t *);
 uint8_t spr_addr(uint8_t);
 void inc_pc(chip8_t *);
-void draw_screen(chip8_t *);
 void emulate_cycle(chip8_t *);
 
 #endif
