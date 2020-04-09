@@ -1,13 +1,8 @@
 #include "chip8.h"
-#include <SDL2/SDL.h>
 #include <stdlib.h>
 #include <sys/stat.h>
-#include <unistd.h>
 
-SDL_Window *window = NULL;
-SDL_Renderer *renderer = NULL;
-
-chip8_t *init_chip8()
+chip8_t *init_chip8(screen_t *screen)
 {
 	chip8_t *chip8 = malloc(sizeof(chip8_t));
 
@@ -18,8 +13,10 @@ chip8_t *init_chip8()
 	chip8->t_sound = 0;
 	memset(chip8->mem, 0, sizeof(chip8->mem));
 	memset(chip8->V, 0, sizeof(chip8->V));
-	memset(chip8->frame_buf, 0, sizeof(chip8->frame_buf));
 	memset(chip8->stack, 0, sizeof(chip8->stack));
+
+	chip8->screen = screen;
+	memset(chip8->screen->frame_buf, 0, sizeof(chip8->screen->frame_buf));
 
 	memcpy(chip8->mem, chip8_fontset, sizeof(chip8_fontset));
 
@@ -46,64 +43,6 @@ int load_program(chip8_t *chip8)
 	return 1;
 }
 
-int init_gfx()
-{
-	if (SDL_Init(SDL_INIT_VIDEO) < 0)
-	{
-		printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-		return -1;
-	}
-
-	window = SDL_CreateWindow("Chip-8 Emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
-	if (window == NULL)
-	{
-		printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
-		return -1;
-	}
-
-	renderer = SDL_CreateRenderer(window, -1, 0);
-	if (renderer == NULL)
-	{
-		printf("Renderer could not be created! SDL_Error: %s\n", SDL_GetError());
-		return -1;
-	}
-
-	SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
-	return 1;
-}
-
-int close_gfx()
-{
-	SDL_DestroyWindow(window);
-	SDL_Quit();
-}
-
-int stop()
-{
-	close_gfx();
-}
-
-int init()
-{
-	init_gfx();
-
-	return 0;
-}
-
-void draw_screen(chip8_t *chip8)
-{
-	for (int i = 0; i < SCREEN_HEIGHT; i++)
-	{
-		for (int j = 0; j < SCREEN_WIDTH; j++)
-		{
-			if (chip8->frame_buf[j][i] == 1)
-				SDL_RenderDrawPoint(renderer, j, i);
-		}
-	}
-	SDL_RenderPresent(renderer);
-	chip8->draw_flag = 0;
-}
-
 uint8_t spr_addr(uint8_t c)
 {
 	if (c > 0xF)
@@ -115,6 +54,20 @@ uint8_t spr_addr(uint8_t c)
 void inc_pc(chip8_t *chip8)
 {
 	chip8->pc += 2;
+}
+
+void draw_screen(chip8_t *chip8)
+{
+    for (int i = 0; i < SCREEN_HEIGHT; i++)
+    {
+        for (int j = 0; j < SCREEN_WIDTH; j++)
+        {
+            if (chip8->screen->frame_buf[j][i] == 1)
+                SDL_RenderDrawPoint(chip8->screen->renderer, j, i);
+        }
+    }
+    SDL_RenderPresent(chip8->screen->renderer);
+    chip8->screen->draw_flag = 0;
 }
 
 void emulate_cycle(chip8_t *chip8)
@@ -130,8 +83,8 @@ void emulate_cycle(chip8_t *chip8)
 		switch (opcode & 0x00FF)
 		{
 		case 0x00E0:
-			memset(chip8->frame_buf, 0, sizeof(chip8->frame_buf));
-			chip8->draw_flag = 1;
+			memset(chip8->screen->frame_buf, 0, sizeof(chip8->screen->frame_buf));
+			chip8->screen->draw_flag = 1;
 			inc_pc(chip8);
 			break;
 		case 0x00EE:
@@ -243,14 +196,14 @@ void emulate_cycle(chip8_t *chip8)
 			{
 				if ((d & (0x80 >> xline)) != 0)
 				{
-					if (chip8->frame_buf[a + xline][b + yline] == 1)
+					if (chip8->screen->frame_buf[a + xline][b + yline] == 1)
 						chip8->V[0xF] = 1;
-					chip8->frame_buf[a + xline][b + yline] ^= 1;
+					chip8->screen->frame_buf[a + xline][b + yline] ^= 1;
 				}
 			}
 		}
 
-		chip8->draw_flag = 1;
+		chip8->screen->draw_flag = 1;
 		inc_pc(chip8);
 		break;
 	case 0xE000:
@@ -318,22 +271,4 @@ void emulate_cycle(chip8_t *chip8)
 	{
 		chip8->t_sound--;
 	}
-}
-
-int main()
-{
-	chip8_t *c = init_chip8();
-	init_gfx();
-	load_program(c);
-
-	while (1)
-	{
-		emulate_cycle(c);
-		if (c->draw_flag)
-			draw_screen(c);
-		usleep(5000);
-		// usleep(500000);
-	}
-
-	return 0;
 }

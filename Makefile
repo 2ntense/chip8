@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Werror
 LDFLAGS = -lSDL2
-OBJFILES = chip8.o
+OBJFILES = chip8.o screen.o main.o
 TARGET = chip8
 BUILD_PATH = ./build
 BIN_PATH = ./bin
@@ -11,12 +11,20 @@ all: $(TARGET)
 
 $(TARGET): $(OBJFILES)
 	mkdir -p $(BUILD_PATH); \
-	$(CC) $(CFLAGS) -o $(BUILD_PATH)/$(TARGET) $(SRC_PATH)/$(OBJFILES) $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $(BUILD_PATH)/$(TARGET) $(SRC_PATH)/chip8.o $(SRC_PATH)/screen.o $(SRC_PATH)/main.o $(LDFLAGS)
 
 chip8.o: $(SRC_PATH)/chip8.c $(SRC_PATH)/chip8.h
 	cd $(SRC_PATH); \
 	$(CC) $(CFLAGS) -c chip8.c
 
+screen.o: $(SRC_PATH)/screen.c $(SRC_PATH)/screen.h
+	cd $(SRC_PATH); \
+	$(CC) $(CFLAGS) -c screen.c
+
+main.o:
+	cd $(SRC_PATH); \
+	$(CC) $(CFLAGS) -c main.c
+	
 run:
 	./build/chip8
 
