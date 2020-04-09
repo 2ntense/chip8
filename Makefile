@@ -24,6 +24,17 @@ screen.o: $(SRC_PATH)/screen.c $(SRC_PATH)/screen.h
 main.o:
 	cd $(SRC_PATH); \
 	$(CC) $(CFLAGS) -c main.c
+
+debug:
+	cd $(SRC_PATH); \
+	$(CC) -g $(CFLAGS) -c chip8.c; \
+	$(CC) -g $(CFLAGS) -c screen.c; \
+	$(CC) -g $(CFLAGS) -c main.c; \
+	cd ..; \
+	mkdir -p $(BUILD_PATH); \
+	$(CC) -g $(CFLAGS) -o $(BUILD_PATH)/$(TARGET) $(SRC_PATH)/chip8.o $(SRC_PATH)/screen.o $(SRC_PATH)/main.o $(LDFLAGS)
+	
+
 	
 run:
 	./build/chip8 $(PROGRAM)

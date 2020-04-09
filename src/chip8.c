@@ -14,6 +14,7 @@ chip8_t *init_chip8(screen_t *screen)
 	memset(chip8->mem, 0, sizeof(chip8->mem));
 	memset(chip8->V, 0, sizeof(chip8->V));
 	memset(chip8->stack, 0, sizeof(chip8->stack));
+	memset(key, 0, sizeof(key));
 
 	chip8->screen = screen;
 	memset(chip8->screen->frame_buf, 0, sizeof(chip8->screen->frame_buf));
@@ -62,12 +63,33 @@ void inc_pc(chip8_t *chip8)
 	chip8->pc += 2;
 }
 
+void drw(uint8_t x, uint8_t y, uint8_t size, chip8_t *chip8)
+{
+	chip8->V[0xF] = 0;
+	for (int yline = 0; yline < size; yline++)
+	{
+		uint8_t pixels = chip8->mem[chip8->I + yline];
+		for (int xline = 0; xline < 8; xline++)
+		{
+			if ((pixels & (0x80 >> xline)) != 0)
+			{
+				uint8_t abs_x = x + xline;
+				uint8_t abs_y = y + yline;
+				chip8->V[0xF] = (chip8->screen->frame_buf[abs_x % SCREEN_WIDTH][abs_y % SCREEN_HEIGHT] == 1) ? 1 : 0;
+				chip8->screen->frame_buf[abs_x % SCREEN_WIDTH][abs_y % SCREEN_HEIGHT] ^= 1;
+			}
+		}
+	}
+
+	chip8->screen->draw_flag = 1;
+}
+
 void emulate_cycle(chip8_t *chip8)
 {
 	// Fetch Opcode
 	uint16_t opcode = chip8->mem[chip8->pc] << 8 | chip8->mem[chip8->pc + 1];
 	// inc_pc(chip8);
-	printf("pc: %04x\topcode: %04x\tI: %04x\n", chip8->pc, opcode, chip8->I);
+	// printf("pc: %04x\topcode: %04x\tI: %04x\n", chip8->pc, opcode, chip8->I);
 	// Decode Opcode
 	uint16_t a, b, c, d = 0;
 	switch (opcode & 0xF000)
@@ -177,36 +199,45 @@ void emulate_cycle(chip8_t *chip8)
 		inc_pc(chip8);
 		break;
 	case 0xD000:
+		// a = chip8->V[(opcode & 0x0F00) >> 8]; // x
+		// b = chip8->V[(opcode & 0x00F0) >> 4]; // y
+		// c = opcode & 0x000F;									// amount
+		// // printf("drawing x: %d, y: %d, n: %d\n", a, b, c);
+		// chip8->V[0xF] = 0;
+		// for (int yline = 0; yline < c; yline++)
+		// {
+		// 	d = chip8->mem[chip8->I + yline];
+		// 	for (int xline = 0; xline < 8; xline++)
+		// 	{
+		// 		if ((d & (0x80 >> xline)) != 0)
+		// 		{
+		// 			chip8->V[0xF] = (chip8->screen->frame_buf[a + xline][b + yline] == 1) ? 1 : 0;
+		// 			chip8->screen->frame_buf[a + xline][b + yline] ^= 1;
+		// 		}
+		// 	}
+		// }
+
+		// chip8->screen->draw_flag = 1;
 		a = chip8->V[(opcode & 0x0F00) >> 8]; // x
 		b = chip8->V[(opcode & 0x00F0) >> 4]; // y
-		c = opcode & 0x000F;				  // amount
-		// printf("drawing x: %d, y: %d, n: %d\n", a, b, c);
-		chip8->V[0xF] = 0;
-		for (int yline = 0; yline < c; yline++)
-		{
-			d = chip8->mem[chip8->I + yline];
-			for (int xline = 0; xline < 8; xline++)
-			{
-				if ((d & (0x80 >> xline)) != 0)
-				{
-					if (chip8->screen->frame_buf[a + xline][b + yline] == 1)
-						chip8->V[0xF] = 1;
-					chip8->screen->frame_buf[a + xline][b + yline] ^= 1;
-				}
-			}
-		}
-
-		chip8->screen->draw_flag = 1;
+		c = opcode & 0x000F;									// amount
+		drw(a, b, c, chip8);
 		inc_pc(chip8);
 		break;
 	case 0xE000:
 		switch (opcode & 0x00FF)
 		{
 		case 0x009E:
-			/* code */
+			if (key[chip8->V[(opcode & 0xF00) >> 8]])
+			{
+				inc_pc(chip8);
+			}
 			break;
 		case 0x00A1:
-			/* code */
+			if (!key[chip8->V[(opcode & 0xF00) >> 8]])
+			{
+				inc_pc(chip8);
+			}
 			break;
 		default:
 			break;
@@ -220,10 +251,20 @@ void emulate_cycle(chip8_t *chip8)
 			chip8->V[(opcode & 0x0F00) >> 8] = chip8->t_delay;
 			break;
 		case 0x000A:
-			chip8->key_press = 0;
-			while (!chip8->key_press)
-				;
-			chip8->V[(opcode & 0x0F00) >> 8] = chip8->key_press;
+			for (a = 0; a < NUM_KEYS; a++)
+			{
+				printf("key[%x] == %d\n", a, key[a]);
+			}
+			for (a = 0; a < NUM_KEYS; a++)
+			{
+				if (key[a])
+				{
+					chip8->V[(opcode & 0x0F00) >> 8] = a;
+					inc_pc(chip8);
+					break;
+				}
+			}
+			chip8->pc -= 2;
 			break;
 		case 0x0015:
 			chip8->t_delay = chip8->V[(opcode & 0x0F00) >> 8];
@@ -255,7 +296,10 @@ void emulate_cycle(chip8_t *chip8)
 		inc_pc(chip8);
 		break;
 	}
+}
 
+void dec_timers(chip8_t *chip8)
+{
 	if (chip8->t_delay > 0)
 	{
 		chip8->t_delay--;

@@ -29,6 +29,10 @@ static const uint8_t chip8_fontset[80] =
 		0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
 
+uint8_t key[NUM_KEYS];
+uint8_t wait_for_key;
+uint8_t key_pressed;
+
 typedef struct chip8_t
 {
 	uint8_t mem[MEMORY_SIZE];	// Memory
@@ -49,6 +53,7 @@ int load_program(chip8_t *, char *);
 uint8_t spr_addr(uint8_t);
 void inc_pc(chip8_t *);
 void emulate_cycle(chip8_t *);
+void dec_timers(chip8_t *);
 void free_chip8(chip8_t *);
 
 #endif

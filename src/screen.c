@@ -25,12 +25,16 @@ screen_t *init_screen()
     }
 
     // SDL_CreateWindowAndRenderer(SCREEN_WINDOW_WIDTH, SCREEN_WINDOW_HEIGHT, 0, &screen->window, &screen->renderer);
-    SDL_SetRenderDrawColor(screen->renderer, 0, 255, 0, 255);
+    // SDL_SetRenderDrawColor(screen->renderer, 0, 255, 0, 255);
     return screen;
 }
 
 void draw_screen(screen_t *screen)
 {
+    SDL_SetRenderDrawColor(screen->renderer, 0, 0, 0, 255);
+    SDL_RenderClear(screen->renderer);
+    SDL_SetRenderDrawColor(screen->renderer, 0, 255, 0, 255);
+
     SDL_Rect r = {0,
                   0,
                   1 * SCREEN_WIDTH_SCALE,
@@ -69,9 +73,6 @@ void print_screen(screen_t *screen)
         }
         printf("\n");
     }
-
-    SDL_RenderPresent(screen->renderer);
-    screen->draw_flag = 0;
 }
 
 int free_screen(screen_t *screen)
