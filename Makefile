@@ -26,7 +26,7 @@ main.o:
 	$(CC) $(CFLAGS) -c main.c
 	
 run:
-	./build/chip8
+	./build/chip8 $(PROGRAM)
 
 dl_roms:
 	mkdir -p roms/ tmp/; \

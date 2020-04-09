@@ -49,5 +49,6 @@ int load_program(chip8_t *, char *);
 uint8_t spr_addr(uint8_t);
 void inc_pc(chip8_t *);
 void emulate_cycle(chip8_t *);
+void free_chip8(chip8_t *);
 
 #endif

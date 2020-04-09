@@ -62,24 +62,11 @@ void inc_pc(chip8_t *chip8)
 	chip8->pc += 2;
 }
 
-// void draw_screen(chip8_t *chip8)
-// {
-// 	for (int i = 0; i < SCREEN_HEIGHT; i++)
-// 	{
-// 		for (int j = 0; j < SCREEN_WIDTH; j++)
-// 		{
-// 			if (chip8->screen->frame_buf[j][i] == 1)
-// 				SDL_RenderDrawPoint(chip8->screen->renderer, j, i);
-// 		}
-// 	}
-// 	SDL_RenderPresent(chip8->screen->renderer);
-// 	chip8->screen->draw_flag = 0;
-// }
-
 void emulate_cycle(chip8_t *chip8)
 {
 	// Fetch Opcode
 	uint16_t opcode = chip8->mem[chip8->pc] << 8 | chip8->mem[chip8->pc + 1];
+	// inc_pc(chip8);
 	printf("pc: %04x\topcode: %04x\tI: %04x\n", chip8->pc, opcode, chip8->I);
 	// Decode Opcode
 	uint16_t a, b, c, d = 0;
@@ -277,4 +264,9 @@ void emulate_cycle(chip8_t *chip8)
 	{
 		chip8->t_sound--;
 	}
+}
+
+void free_chip8(chip8_t *chip8)
+{
+	free(chip8);
 }
