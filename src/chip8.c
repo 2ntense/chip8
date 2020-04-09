@@ -1,6 +1,7 @@
 #include "chip8.h"
 #include <stdlib.h>
 #include <sys/stat.h>
+#include "input.h"
 
 chip8_t *init_chip8(screen_t *screen)
 {
