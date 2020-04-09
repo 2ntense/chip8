@@ -1,18 +1,13 @@
+#include "chip8.h"
 #include <SDL2/SDL.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define SCREEN_WIDTH 64
-#define SCREEN_HEIGHT 32
-
-#define MEMORY_SIZE 4096
-#define STACK_SIZE 16
-
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
 
-unsigned char chip8_fontset[80] =
+uint8_t chip8_fontset[80] =
 	{
 		0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
 		0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -32,21 +27,21 @@ unsigned char chip8_fontset[80] =
 		0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
 
-unsigned char mem[MEMORY_SIZE];
+uint8_t mem[MEMORY_SIZE];
 // registers
-unsigned short pc;
-unsigned char V[16];
-unsigned short I;
-unsigned char sp;
-unsigned char t_delay;
-unsigned char t_sound;
+uint16_t pc;
+uint8_t V[16];
+uint16_t I;
+uint8_t sp;
+uint8_t t_delay;
+uint8_t t_sound;
 
-unsigned char screen[SCREEN_WIDTH][SCREEN_HEIGHT];
-unsigned short opcode;
-unsigned short stack[STACK_SIZE];
-unsigned char key[16];
-unsigned char key_press;
-unsigned char draw_flag;
+uint8_t frame_buf[SCREEN_WIDTH][SCREEN_HEIGHT];
+uint16_t opcode;
+uint16_t stack[STACK_SIZE];
+uint8_t key[16];
+uint8_t key_press;
+uint8_t draw_flag;
 
 int init_chip8()
 {
@@ -57,7 +52,7 @@ int init_chip8()
 	sp = 0;
 	t_delay = 0;
 	t_sound = 0;
-	memset(screen, 0, sizeof(screen));
+	memset(frame_buf, 0, sizeof(frame_buf));
 	opcode = 0;
 	memset(stack, 0, sizeof(stack));
 	memcpy(mem, chip8_fontset, sizeof(chip8_fontset));
@@ -65,9 +60,27 @@ int init_chip8()
 	printf("CHIP-8 cleared and initialized\n");
 }
 
+void init_chip8n(chip8_t *chip8)
+{
+	chip8->pc = 0x200;
+	chip8->I = 0;
+	chip8->sp = 0;
+	chip8->t_delay = 0;
+	chip8->t_sound = 0;
+	chip8->opcode = 0;
+	memset(chip8->mem, 0, sizeof(chip8->mem));
+	memset(chip8->V, 0, sizeof(chip8->V));
+	memset(chip8->frame_buf, 0, sizeof(chip8->frame_buf));
+	memset(chip8->stack, 0, sizeof(chip8->stack));
+
+	memcpy(mem, chip8_fontset, sizeof(chip8_fontset));
+
+	printf("CHIP-8 initialized\n");
+}
+
 int load_program()
 {
-	char *file_path = "roms/IBM.ch8";
+	char *file_path = "roms/WALL.ch8";
 	FILE *f = fopen(file_path, "rb");
 
 	struct stat s;
@@ -133,7 +146,7 @@ void draw_screen()
 	{
 		for (int j = 0; j < SCREEN_WIDTH; j++)
 		{
-			if (screen[j][i] == 1)
+			if (frame_buf[j][i] == 1)
 				SDL_RenderDrawPoint(renderer, j, i);
 		}
 	}
@@ -141,7 +154,7 @@ void draw_screen()
 	draw_flag = 0;
 }
 
-unsigned char spr_addr(unsigned char c)
+uint8_t spr_addr(uint8_t c)
 {
 	if (c > 0xF)
 		return 0;
@@ -158,26 +171,21 @@ void emulate_cycle()
 {
 	// Fetch Opcode
 	opcode = mem[pc] << 8 | mem[pc + 1];
-	// printf("pc: %04x\topcode: %04x\n", pc, opcode);
+	printf("pc: %04x\topcode: %04x\tI: %04x\n", pc, opcode, I);
 	// Decode Opcode
-	unsigned short a;
-	unsigned short b;
-	unsigned short c;
-	unsigned short d;
+	uint16_t a, b, c, d = 0;
 	switch (opcode & 0xF000)
 	{
 	case 0x0000:
 		switch (opcode & 0x00FF)
 		{
 		case 0x00E0:
-			memset(screen, 0, sizeof(screen));
+			memset(frame_buf, 0, sizeof(frame_buf));
 			draw_flag = 1;
 			inc_pc();
 			break;
 		case 0x00EE:
-			// return from a subroutine
-			if (sp > 0)
-				sp--;
+			sp--;
 			pc = stack[sp];
 			break;
 		default:
@@ -190,10 +198,7 @@ void emulate_cycle()
 		break;
 	case 0x2000:
 		stack[sp] = pc;
-		if (sp < STACK_SIZE - 1)
-			sp++;
-		else
-			printf("Stack is full\n");
+		sp++;
 		pc = opcode & 0x0FFF;
 		break;
 	case 0x3000:
@@ -216,7 +221,7 @@ void emulate_cycle()
 		inc_pc();
 		break;
 	case 0x7000:
-		V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x0F00) >> 8] + opcode & 0x00FF;
+		V[(opcode & 0x0F00) >> 8] += opcode & 0x00FF;
 		inc_pc();
 		break;
 	case 0x8000:
@@ -226,18 +231,17 @@ void emulate_cycle()
 			V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x00F0) >> 4];
 			break;
 		case 0x0001:
-			V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x0F00) >> 8] | V[(opcode & 0x00F0) >> 4];
+			V[(opcode & 0x0F00) >> 8] |= V[(opcode & 0x00F0) >> 4];
 			break;
 		case 0x0002:
-			V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x0F00) >> 8] & V[(opcode & 0x00F0) >> 4];
+			V[(opcode & 0x0F00) >> 8] &= V[(opcode & 0x00F0) >> 4];
 			break;
 		case 0x0003:
-			V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x0F00) >> 8] ^ V[(opcode & 0x00F0) >> 4];
+			V[(opcode & 0x0F00) >> 8] ^= V[(opcode & 0x00F0) >> 4];
 			break;
 		case 0x0004:
-			a = V[(opcode & 0x0F00) >> 8] + V[(opcode & 0x00F0) >> 4];
-			V[0xF] = a > 0xFF ? 1 : 0;
-			V[(opcode & 0x0F00) >> 4] = a & 0x000F;
+			V[0xF] = V[(opcode & 0x0F00) >> 8] + V[(opcode & 0x00F0) >> 4] > 0xFF ? 1 : 0;
+			V[(opcode & 0x0F00) >> 8] = a & 0x00FF;
 			break;
 		case 0x0005:
 			V[0xF] = V[(opcode & 0x0F00) >> 8] > V[(opcode & 0x00F0) >> 4] ? 1 : 0;
@@ -245,7 +249,7 @@ void emulate_cycle()
 			break;
 		case 0x0006:
 			V[0xF] = V[(opcode & 0x0F00) >> 8] & 1 == 1 ? 1 : 0;
-			V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x0F00) >> 8] >> 1;
+			V[(opcode & 0x0F00) >> 8] >>= 1;
 			break;
 		case 0x0007:
 			V[0xF] = V[(opcode & 0x00F0) >> 4] > V[(opcode & 0x0F00) >> 8] ? 1 : 0;
@@ -253,7 +257,7 @@ void emulate_cycle()
 			break;
 		case 0x000E:
 			V[0xF] = V[(opcode & 0x0F00) >> 8] & 1 == 1 ? 1 : 0;
-			V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x0F00) >> 8] << 1;
+			V[(opcode & 0x0F00) >> 8] <<= 1;
 			break;
 		default:
 			break;
@@ -277,8 +281,8 @@ void emulate_cycle()
 		inc_pc();
 		break;
 	case 0xD000:
-		a = V[(opcode & 0x0F00) >> 2]; // x
-		b = V[(opcode & 0x00F0) >> 1]; // y
+		a = V[(opcode & 0x0F00) >> 8]; // x
+		b = V[(opcode & 0x00F0) >> 4]; // y
 		c = opcode & 0x000F;		   // amount
 		// printf("drawing x: %d, y: %d, n: %d\n", a, b, c);
 		V[0xF] = 0;
@@ -289,9 +293,9 @@ void emulate_cycle()
 			{
 				if ((d & (0x80 >> xline)) != 0)
 				{
-					if (screen[a + xline][b + yline] == 1)
+					if (frame_buf[a + xline][b + yline] == 1)
 						V[0xF] = 1;
-					screen[a + xline][b + yline] ^= 1;
+					frame_buf[a + xline][b + yline] ^= 1;
 				}
 			}
 		}
@@ -317,13 +321,13 @@ void emulate_cycle()
 		switch (opcode & 0x00FF)
 		{
 		case 0x0007:
-			V[(opcode & 0x0F00) >> 2] = t_delay;
+			V[(opcode & 0x0F00) >> 8] = t_delay;
 			break;
 		case 0x000A:
 			key_press = 0;
 			while (!key_press)
 				;
-			V[(opcode & 0x0F00) >> 2] = key_press;
+			V[(opcode & 0x0F00) >> 8] = key_press;
 			break;
 		case 0x0015:
 			t_delay = V[(opcode & 0x0F00) >> 8];
@@ -335,19 +339,19 @@ void emulate_cycle()
 			I += (opcode & 0x0F00) >> 8;
 			break;
 		case 0x0029:
-			I = spr_addr(V[(opcode & 0x0F00) >> 2]);
+			I = spr_addr(V[(opcode & 0x0F00) >> 8]);
 			break;
 		case 0x0033:
-			a = (opcode & 0x0F00) >> 2;
+			a = (opcode & 0x0F00) >> 8;
 			mem[I] = V[a] / 100;
 			mem[I + 1] = V[a] % 100 / 10;
 			mem[I + 2] = V[a] % 100 % 10;
 			break;
 		case 0x0055:
-			memcpy(mem + I, V, (opcode & 0x0F00) >> 2);
+			memcpy(mem + I, V, (opcode & 0x0F00) >> 8);
 			break;
 		case 0x0065:
-			memcpy(V, mem + I, (opcode & 0x0F00) >> 2);
+			memcpy(V, mem + I, (opcode & 0x0F00) >> 8);
 			break;
 		default:
 			break;
@@ -369,7 +373,7 @@ int main()
 		emulate_cycle();
 		if (draw_flag)
 			draw_screen();
-		usleep(50000);
+		usleep(5000);
 		// usleep(500000);
 	}
 
