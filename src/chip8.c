@@ -25,9 +25,8 @@ chip8_t *init_chip8(screen_t *screen)
 	return chip8;
 }
 
-int load_program(chip8_t *chip8)
+int load_program(chip8_t *chip8, char *file_path)
 {
-	char *file_path = "roms/WALL.ch8";
 	FILE *f = fopen(file_path, "rb");
 
 	struct stat s;

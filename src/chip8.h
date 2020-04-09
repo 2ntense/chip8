@@ -45,7 +45,7 @@ typedef struct chip8_t
 } chip8_t;
 
 chip8_t *init_chip8(screen_t *);
-int load_program(chip8_t *);
+int load_program(chip8_t *, char *);
 uint8_t spr_addr(uint8_t);
 void inc_pc(chip8_t *);
 void emulate_cycle(chip8_t *);

@@ -1,12 +1,18 @@
 #include "chip8.h"
 #include <unistd.h>
 
-int main()
+int main(int argc, char** argv)
 {
+	if (argc < 2)
+	{
+		printf("Specify program\n");
+		return 1;
+	}
+
 	screen_t *screen = init_screen();
 	chip8_t *chip8 = init_chip8(screen);
 
-	load_program(chip8);
+	load_program(chip8, argv[1]);
 
 	while (1)
 	{
