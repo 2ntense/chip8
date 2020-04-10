@@ -1,33 +1,20 @@
 CC = gcc
 CFLAGS = -Werror
 LDFLAGS = -lSDL2
-OBJFILES = chip8.o screen.o input.o main.o
 TARGET = chip8
-BUILD_PATH = ./build
 BIN_PATH = ./bin
 SRC_PATH = ./src
 
 all: $(TARGET)
 
-$(TARGET): $(OBJFILES)
-	mkdir -p $(BUILD_PATH); \
-	$(CC) $(CFLAGS) -o $(BUILD_PATH)/$(TARGET) $(OBJFILES:%=$(SRC_PATH)/%) $(LDFLAGS)
+$(TARGET): *.o
+	mkdir -p $(BIN_PATH);\
+	$(CC) $(CFLAGS) -o $(BIN_PATH)/$(TARGET) $(wildcard $(SRC_PATH)/*.o) $(LDFLAGS)
 
-chip8.o: $(SRC_PATH)/chip8.c $(SRC_PATH)/chip8.h
-	cd $(SRC_PATH); \
-	$(CC) $(CFLAGS) -c chip8.c
-
-input.o: $(SRC_PATH)/input.c $(SRC_PATH)/input.h
-	cd $(SRC_PATH); \
-	$(CC) $(CFLAGS) -c input.c
-
-screen.o: $(SRC_PATH)/screen.c $(SRC_PATH)/screen.h
-	cd $(SRC_PATH); \
-	$(CC) $(CFLAGS) -c screen.c
-
-main.o:
-	cd $(SRC_PATH); \
-	$(CC) $(CFLAGS) -c main.c
+*.o:
+	cd $(SRC_PATH);\
+	$(CC) $(CFLAGS) -c *.c
+	
 
 debug:
 	cd $(SRC_PATH); \
@@ -51,4 +38,4 @@ dl_roms:
 	rm -rf ./tmp
 
 clean:
-	rm -rf roms/ build/ src/*.o
+	rm -rf roms/ bin/ src/*.o
