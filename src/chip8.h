@@ -49,5 +49,6 @@ extern chip8_t *init_chip8(screen_t *, uint8_t *);
 extern int load_program(chip8_t *, char *);
 extern void emulate_cycle(chip8_t *);
 extern void free_chip8(chip8_t *);
+extern void dec_timers(chip8_t *);
 
 #endif

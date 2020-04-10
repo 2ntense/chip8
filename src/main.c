@@ -25,7 +25,7 @@ int main(int argc, char **argv)
 			switch (event.type)
 			{
 			case SDL_KEYDOWN:
-				printf("%d\n", event.key.keysym.scancode);
+				// printf("%d\n", event.key.keysym.scancode);
 				if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE)
 				{
 					quit = SDL_TRUE;
@@ -43,6 +43,7 @@ int main(int argc, char **argv)
 			}
 		}
 		emulate_cycle(chip8);
+		dec_timers(chip8);
 		draw_screen(chip8->screen);
 		// usleep(50000);
 	}

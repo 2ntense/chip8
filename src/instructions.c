@@ -17,7 +17,7 @@ void drw(uint8_t x, uint8_t y, uint8_t size, chip8_t *chip8)
             {
                 uint8_t abs_x = (x + xline) % SCREEN_WIDTH;
                 uint8_t abs_y = (y + yline) % SCREEN_HEIGHT;
-                chip8->V[0xF] = (chip8->screen->frame_buf[abs_x][abs_y] == 1) ? 1 : 0;
+                chip8->V[0xF] |= (chip8->screen->frame_buf[abs_x][abs_y]);
                 chip8->screen->frame_buf[abs_x][abs_y] ^= 1;
             }
         }
@@ -27,6 +27,7 @@ void drw(uint8_t x, uint8_t y, uint8_t size, chip8_t *chip8)
 void process_opcode(chip8_t *chip8)
 {
     uint16_t opcode = chip8->mem[chip8->pc] << 8 | chip8->mem[chip8->pc + 1];
+    printf("opcode: %04x\n", opcode);
     uint16_t a, b, c = 0;
 
     switch (opcode & 0xF000)
@@ -37,7 +38,6 @@ void process_opcode(chip8_t *chip8)
         case 0x00E0:
             memset(chip8->screen->frame_buf, 0, sizeof(chip8->screen->frame_buf));
             chip8->screen->draw_flag = 1;
-            inc_pc(chip8);
             break;
         case 0x00EE:
             chip8->sp--;
@@ -47,6 +47,7 @@ void process_opcode(chip8_t *chip8)
             // Calls RCA 1802 program at address 0x0NNN. Not necessary for most ROMs.
             break;
         }
+        inc_pc(chip8);
         break;
     case 0x1000:
         chip8->pc = opcode & 0x0FFF;
@@ -58,17 +59,23 @@ void process_opcode(chip8_t *chip8)
         break;
     case 0x3000:
         if (chip8->V[(opcode & 0x0F00) >> 8] == (opcode & 0x00FF))
+        {
             inc_pc(chip8);
+        }
         inc_pc(chip8);
         break;
     case 0x4000:
         if (chip8->V[(opcode & 0x0F00) >> 8] != (opcode & 0x00FF))
+        {
             inc_pc(chip8);
+        }
         inc_pc(chip8);
         break;
     case 0x5000:
         if (chip8->V[(opcode & 0x0F00) >> 8] == chip8->V[(opcode & 0x00F0) >> 4])
+        {
             inc_pc(chip8);
+        }
         inc_pc(chip8);
         break;
     case 0x6000:
@@ -103,7 +110,7 @@ void process_opcode(chip8_t *chip8)
             chip8->V[(opcode & 0x0F00) >> 8] = chip8->V[(opcode & 0x0F00) >> 8] - chip8->V[(opcode & 0x00F0) >> 4];
             break;
         case 0x0006:
-            chip8->V[0xF] = chip8->V[(opcode & 0x0F00) >> 8] & 1 == 1 ? 1 : 0;
+            chip8->V[0xF] = chip8->V[(opcode & 0x0F00) >> 8] & 1;
             chip8->V[(opcode & 0x0F00) >> 8] >>= 1;
             break;
         case 0x0007:
@@ -111,7 +118,8 @@ void process_opcode(chip8_t *chip8)
             chip8->V[(opcode & 0x00F0) >> 4] = chip8->V[(opcode & 0x00F0) >> 4] - chip8->V[(opcode & 0x0F00) >> 8];
             break;
         case 0x000E:
-            chip8->V[0xF] = chip8->V[(opcode & 0x0F00) >> 8] & 1 == 1 ? 1 : 0;
+            // chip8->V[0xF] = chip8->V[(opcode & 0x0F00) >> 8] & 1 == 1 ? 1 : 0;
+            chip8->V[0xF] = chip8->V[(opcode & 0x0F00) >> 8] >> 7;
             chip8->V[(opcode & 0x0F00) >> 8] <<= 1;
             break;
         default:
@@ -121,7 +129,9 @@ void process_opcode(chip8_t *chip8)
         break;
     case 0x9000:
         if (chip8->V[(opcode & 0x0F00) >> 8] != chip8->V[(opcode & 0x00F0) >> 4])
+        {
             inc_pc(chip8);
+        }
         inc_pc(chip8);
         break;
     case 0xA000:
@@ -140,6 +150,7 @@ void process_opcode(chip8_t *chip8)
         b = chip8->V[(opcode & 0x00F0) >> 4]; // y
         c = opcode & 0x000F;                  // size
         drw(a, b, c, chip8);
+        chip8->screen->draw_flag = 1;
         inc_pc(chip8);
         break;
     case 0xE000:
@@ -169,10 +180,6 @@ void process_opcode(chip8_t *chip8)
             chip8->V[(opcode & 0x0F00) >> 8] = chip8->t_delay;
             break;
         case 0x000A:
-            // for (a = 0; a < sizeof(chip8->key); a++)
-            // {
-            //     printf("key[%x] == %d\n", a, chip8->key[a]);
-            // }
             for (a = 0; a < sizeof(chip8->key); a++)
             {
                 if (chip8->key[a])
@@ -198,15 +205,21 @@ void process_opcode(chip8_t *chip8)
             break;
         case 0x0033:
             a = (opcode & 0x0F00) >> 8;
-            chip8->mem[chip8->I] = chip8->V[a] / 100;
-            chip8->mem[chip8->I + 1] = chip8->V[a] % 100 / 10;
-            chip8->mem[chip8->I + 2] = chip8->V[a] % 100 % 10;
+            chip8->mem[chip8->I] = chip8->V[a] / 100 * 100;
+            chip8->mem[chip8->I + 1] = chip8->V[a] % 100 / 10 * 10;
+            chip8->mem[chip8->I + 2] = chip8->V[a] % 10;
             break;
         case 0x0055:
-            memcpy(chip8->mem + chip8->I, chip8->V, (opcode & 0x0F00) >> 8);
+            for (a = 0; a <= ((opcode & 0x0F00) >> 8); a++)
+            {
+                chip8->mem[chip8->I + a] = chip8->V[a];
+            }
             break;
         case 0x0065:
-            memcpy(chip8->V, chip8->mem + chip8->I, (opcode & 0x0F00) >> 8);
+            for (a = 0; a <= ((opcode & 0x0F00) >> 8); a++)
+            {
+                chip8->V[a] = chip8->mem[chip8->I + a];
+            }
             break;
         default:
             break;

@@ -31,6 +31,7 @@ screen_t *init_screen()
 
 void draw_screen(screen_t *screen)
 {
+    // print_screen(screen);
     SDL_SetRenderDrawColor(screen->renderer, 0, 0, 0, 255);
     SDL_RenderClear(screen->renderer);
     SDL_SetRenderDrawColor(screen->renderer, 0, 255, 0, 255);
@@ -58,6 +59,8 @@ void draw_screen(screen_t *screen)
 
 void print_screen(screen_t *screen)
 {
+    printf("\e[1;1H\e[2J");
+
     for (uint8_t y = 0; y < SCREEN_HEIGHT; y++)
     {
         for (uint8_t x = 0; x < SCREEN_WIDTH; x++)

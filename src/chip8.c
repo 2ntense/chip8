@@ -4,7 +4,6 @@
 
 chip8_t *init_chip8(screen_t *screen, uint8_t *key)
 {
-
 	chip8_t *chip8 = malloc(sizeof(chip8_t));
 	chip8->pc = 0x200;
 	chip8->I = 0;
