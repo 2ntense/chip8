@@ -11,7 +11,7 @@ all: $(TARGET)
 
 $(TARGET): $(OBJFILES)
 	mkdir -p $(BUILD_PATH); \
-	$(CC) $(CFLAGS) -o $(BUILD_PATH)/$(TARGET) $(SRC_PATH)/chip8.o $(SRC_PATH)/screen.o $(SRC_PATH)/input.o $(SRC_PATH)/main.o $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $(BUILD_PATH)/$(TARGET) $(OBJFILES:%=$(SRC_PATH)/%) $(LDFLAGS)
 
 chip8.o: $(SRC_PATH)/chip8.c $(SRC_PATH)/chip8.h
 	cd $(SRC_PATH); \
@@ -37,9 +37,7 @@ debug:
 	$(CC) -g $(CFLAGS) -c main.c; \
 	cd ..; \
 	mkdir -p $(BUILD_PATH); \
-	$(CC) -g $(CFLAGS) -o $(BUILD_PATH)/$(TARGET) $(SRC_PATH)/chip8.o $(SRC_PATH)/input.o $(SRC_PATH)/screen.o $(SRC_PATH)/main.o $(LDFLAGS)
-	
-
+	$(CC) -g $(CFLAGS) -o $(BUILD_PATH)/$(TARGET) $(OBJFILES:%=$(SRC_PATH)/%) $(LDFLAGS)
 	
 run:
 	./build/chip8 $(PROGRAM)
