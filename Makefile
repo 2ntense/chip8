@@ -18,16 +18,17 @@ $(TARGET): *.o
 
 debug:
 	cd $(SRC_PATH); \
-	$(CC) -g $(CFLAGS) -c chip8.c; \
-	$(CC) -g $(CFLAGS) -c input.c; \
-	$(CC) -g $(CFLAGS) -c screen.c; \
-	$(CC) -g $(CFLAGS) -c main.c; \
+	$(CC) -g $(CFLAGS) -c *.c; \
 	cd ..; \
-	mkdir -p $(BUILD_PATH); \
-	$(CC) -g $(CFLAGS) -o $(BUILD_PATH)/$(TARGET) $(OBJFILES:%=$(SRC_PATH)/%) $(LDFLAGS)
+	mkdir -p $(BIN_PATH); \
+	$(CC) -g $(CFLAGS) -o $(BIN_PATH)/$(TARGET) $(wildcard $(SRC_PATH)/*.o) $(LDFLAGS)
+
+debug2:
+	$(MAKE) debug
+	
 	
 run:
-	./build/chip8 $(PROGRAM)
+	./bin/chip8 $(PROGRAM)
 
 dl_roms:
 	mkdir -p roms/ tmp/; \

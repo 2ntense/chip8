@@ -1,6 +1,5 @@
 #include "chip8.h"
 #include <unistd.h>
-#include "input.h"
 
 int main(int argc, char **argv)
 {
@@ -12,7 +11,8 @@ int main(int argc, char **argv)
 	}
 
 	screen_t *screen = init_screen();
-	chip8_t *chip8 = init_chip8(screen);
+	uint8_t key[NUM_KEYS];
+	chip8_t *chip8 = init_chip8(screen, key);
 
 	load_program(chip8, argv[1]);
 
@@ -30,10 +30,10 @@ int main(int argc, char **argv)
 				{
 					quit = SDL_TRUE;
 				}
-				on_key_down(&event.key.keysym.scancode);
+				on_key_down(&event.key.keysym.scancode, chip8->key);
 				break;
 			case SDL_KEYUP:
-				on_key_up(&event.key.keysym.scancode);
+				on_key_up(&event.key.keysym.scancode, chip8->key);
 				break;
 			case SDL_QUIT:
 				quit = SDL_TRUE;

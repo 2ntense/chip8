@@ -4,3 +4,4 @@ build/
 *.o
 .vscode/launch.json
 .vscode/tasks.json
+bin/chip8

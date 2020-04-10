@@ -1,6 +1,6 @@
 #include "input.h"
 
-void on_key_down(SDL_Scancode *code)
+void on_key_down(SDL_Scancode *code, uint8_t *key)
 {
     switch (*code)
     {
@@ -57,7 +57,7 @@ void on_key_down(SDL_Scancode *code)
     }
 }
 
-void on_key_up(SDL_Scancode *code)
+void on_key_up(SDL_Scancode *code, uint8_t *key)
 {
     switch (*code)
     {

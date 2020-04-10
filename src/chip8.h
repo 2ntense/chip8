@@ -2,7 +2,9 @@
 #define CHIP8_H
 
 #include <stdint.h>
+#include <stdlib.h>
 #include "screen.h"
+#include "input.h"
 
 #define MEMORY_SIZE 4096
 #define NUM_REGS 16
@@ -28,6 +30,7 @@ static const uint8_t chip8_fontset[80] =
 		0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
 
+
 typedef struct chip8_t
 {
 	uint8_t mem[MEMORY_SIZE];	// Memory
@@ -38,15 +41,13 @@ typedef struct chip8_t
 	uint8_t t_delay;			// Delay timer
 	uint8_t t_sound;			// Sound timer
 	uint16_t stack[STACK_SIZE]; // Stack
+	uint8_t *key;
 	screen_t *screen;
 } chip8_t;
 
-chip8_t *init_chip8(screen_t *);
-int load_program(chip8_t *, char *);
-uint8_t spr_addr(uint8_t);
-void inc_pc(chip8_t *);
-void emulate_cycle(chip8_t *);
-void dec_timers(chip8_t *);
-void free_chip8(chip8_t *);
+extern chip8_t *init_chip8(screen_t *, uint8_t *);
+extern int load_program(chip8_t *, char *);
+extern void emulate_cycle(chip8_t *);
+extern void free_chip8(chip8_t *);
 
 #endif
