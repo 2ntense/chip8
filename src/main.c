@@ -25,10 +25,17 @@ int main(int argc, char **argv)
 			switch (event.type)
 			{
 			case SDL_KEYDOWN:
-				// printf("%d\n", event.key.keysym.scancode);
-				if (event.key.keysym.scancode == SDL_SCANCODE_ESCAPE)
+				switch (event.key.keysym.scancode)
 				{
+				case SDL_SCANCODE_ESCAPE:
 					quit = SDL_TRUE;
+					break;
+				case SDL_SCANCODE_SPACE:
+					screen = init_screen();
+					chip8 = init_chip8(screen, key);
+					load_program(chip8, argv[1]);
+				default:
+					break;
 				}
 				on_key_down(&event.key.keysym.scancode, chip8->key);
 				break;
